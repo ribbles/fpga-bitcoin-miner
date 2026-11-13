@@ -1,12 +1,12 @@
 # FPGA Bitcoin Miner
 
-Working project to mine for bitcoin on Tang Nano 9, Tang Nano 20, Kintex7 or Kintext Untrascale+. Optionally supports a microcontroller to bridge to internet. The project was created to learn Verilog and FPGA programming.
+Working project to mine for bitcoin on Tang Nano 9, Tang Nano 20, Kintex7 or Kintex UltraScale+. Optionally supports a micro-controller to bridge to internet. The project was created to learn Verilog and FPGA programming.
 
 # Performance
 
-- Kintext7: 75 MH/s @ 210MHz (41°C) (48 cores)
+- Kintex7: 75 MH/s @ 210MHz (41°C) (48 cores)
 - Tang Nano 9: 0.4MH/s (2-cores)
-- Kintex Ultrascale+: TODO
+- Kintex UltraScale+: TODO
 
 
 ### Proof of Work
@@ -22,7 +22,7 @@ Working project to mine for bitcoin on Tang Nano 9, Tang Nano 20, Kintex7 or Kin
 1. FPGA:
   1. Tang Nano 9 or 20 (Tested on 9)
   2. AMD Xilinx FPGA (Tested on Kintex7 & Kintext Untrascale+)
-2. Microcontroller (Tested in ESP32-C3 w/ OLED screen)
+2. Micro-Controller (Tested in ESP32-C3 w/ OLED screen)
 3. Wiring to connect Microcontroller UART to FPGA
 4. JTAG (I used [dirtyJTAG](https://github.com/dirtyjtag/DirtyJTAG))
 
@@ -38,7 +38,7 @@ Working project to mine for bitcoin on Tang Nano 9, Tang Nano 20, Kintex7 or Kin
 
 # Software
 
-Runs on Windows 11 using git bash. It should be 100% compatible with linux - just chnage the binary locations in the Makefile.
+Runs on Windows 11 using git bash. It should be 100% compatible with linux - just change the binary locations in the Makefile.
 
 1. [oss-cad-suite 2.1.1](https://github.com/yosyshq/oss-cad-suite-build)
 2. [Vivado](https://www.amd.com/en/support/downloads/adaptive-socs-and-fpgas/development-tools/2026-1.html) (if using Xilinx)
@@ -52,7 +52,7 @@ You can use any pool miner that supports **Stratum V1**. The code connects to `p
 
 # Wiring / GPIO
 
-## Microcontroller:
+## Micro Controller:
 
 - TX: GPIO 21
 - RX: GPIO 20
@@ -64,19 +64,19 @@ You can use any pool miner that supports **Stratum V1**. The code connects to `p
 - TX: GPIO 31
 - RX: GPIO 32
 
-### Kintext7
+### Kintex7
 
 - TX: AE21
 - RX: AF23
 
-### Kintext UltraScale+
+### Kintex UltraScale+
 
 - TX: 
 - RX: 
 
 # Notes:
 
-1. The Xilinx has a wrapper top Verilog file called [top_kintext.v](./top_kintext.v) that constructs a 210MHz clock from the 50MHz oscillator
+1. The Xilinx has a wrapper top Verilog file called [top_kintex.v](./top_kintext.v) that constructs a 210MHz clock from the 50MHz oscillator
 2. You can set the core count in [build_kintex7.tcl](./build_kintex7.tcl)
 
 
@@ -86,15 +86,15 @@ You can use any pool miner that supports **Stratum V1**. The code connects to `p
 make sim
 ```
 
-# Building FPGA bitstream
+# Building FPGA Bitstream
 
 ```
 make vivado
 ```
 
-## FPGA Floorplan
+## FPGA Floor Plan
 
-The build script makes a floorplan which can be found in the build folder.
+The build script makes a floor-plan which can be found in the build folder.
 
 ![Kintex7 floorplan with 48 cores](./chip_floorplan.png)
 
@@ -175,7 +175,7 @@ OPENFPGALOADER='OPENFPGALOADER_SOJ_DIR=/c/fpga/oss-cad-suite/share/openFPGALoade
 2026-11-13 17:44:41 TEMP=42.5C (31.86, 42.93) VCC=1.747V (1.731, 1.773)
 ```
 
-# Building Microcontroller
+# Building Micro Controller
 
-See [Microcontroller README](./mcu/)
+See [Micro Controller README](./mcu/)
 
