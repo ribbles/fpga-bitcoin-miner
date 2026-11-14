@@ -4,8 +4,7 @@
 source "./constr/build.tlc"
 
 set part_device "xc7k325tffg676-2"
-# set part_device "xcku5p-ffvb676-1-i"
-set cores       48
+set cores       
 set clk_freq    210000000
 
 set output_dir  "./build_vivado"
@@ -16,7 +15,7 @@ puts "Starting compilation for device: $part_device"
 puts "Generics -> CLK_FREQ: $clk_freq CORES: $cores"
 
 # 2. Read RTL and constraints.
-read_verilog [glob ./src/*.v]
+read_verilog [glob ./src/*.sv]
 read_xdc "./constr/kintex7.xdc"
 
 # 3. Synthesize the top-level with parameter overrides.

@@ -4,12 +4,13 @@ module top_kintex #(
     parameter CLK_FREQ = 210000000,
     parameter INPUT_CLK_FREQ = 50000000,
     parameter BAUD_RATE = 115200,
-    parameter CORES = 1
+    parameter CORES = 1,
+    parameter LEDS = 4
 )(
     input clk,
     input uart_rx_pin,
     output uart_tx_pin,
-    output [3:0] led
+    output [LEDS-1:0] led
 );
     // Keep the MMCM VCO in a valid Kintex-7 range, then derive the ratios
     // from the requested input and system clock frequencies.
@@ -19,6 +20,7 @@ module top_kintex #(
     wire clk_mmcm;
     wire mmcm_locked;
     wire clk_mmcm_bufg;
+    wire sys_rst;
 
     MMCME2_BASE #(
         .BANDWIDTH("OPTIMIZED"),
@@ -67,12 +69,16 @@ module top_kintex #(
         .O(clk_mmcm_bufg)
     );
 
+    assign sys_rst = ~mmcm_locked;
+
     top #(
         .CLK_FREQ(CLK_FREQ),
         .BAUD_RATE(BAUD_RATE),
-        .CORES(CORES)
+        .CORES(CORES),
+        .LEDS(LEDS)
     ) top_i (
         .clk(clk_mmcm_bufg),
+        .reset(sys_rst),
         .uart_rx_pin(uart_rx_pin),
         .uart_tx_pin(uart_tx_pin),
         .led(led)

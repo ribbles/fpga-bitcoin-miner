@@ -3,15 +3,16 @@
 module top #(
     parameter CLK_FREQ = 27000000,
     parameter BAUD_RATE = 115200,
-    parameter CORES = 1
+    parameter CORES = 2,
+    parameter LEDS = 4
 )(
     input clk,
+    input reset,
     input uart_rx_pin,
     output uart_tx_pin,
-    output [3:0] led
+    output [LEDS-1:0] led
 );
     wire sys_clk = clk;
-    wire mmcm_locked = 1'b1;
 
     // Compute UART Bit Period Tick count
     localparam CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;
@@ -19,16 +20,14 @@ module top #(
     localparam FOUND_RESP_BYTES = 37;
     localparam ECHO_RESP_BYTES = 77;
 
-    reg [23:0] reset_counter = 24'd0;
-    wire reset = !reset_counter[23] || !mmcm_locked;
+    // reg [23:0] reset_counter = 24'd0;
+    // wire reset = !reset_counter[23];
 
-    always @(posedge sys_clk) begin
-        if (!mmcm_locked) begin
-            reset_counter <= 24'd0;
-        end else if (!reset_counter[23]) begin
-            reset_counter <= reset_counter + 24'd1;
-        end
-    end
+    // always @(posedge sys_clk) begin
+    //     if (!reset_counter[23]) begin
+    //         reset_counter <= reset_counter + 24'd1;
+    //     end
+    // end
 
     wire [7:0] rx_data;
     wire rx_valid;
@@ -454,8 +453,15 @@ module top #(
 
     assign led[0] = ~led_core_running;
     assign led[1] = ~found;
-    assign led[2] = ~led_current_nonce[20];
-    assign led[3] = ~led_current_nonce[21];
+
+    genvar j;
+    generate
+    for (j = 2; j < LEDS; j = j + 1) begin : ll
+        assign led[j] = ~led_current_nonce[18 + j];
+    end
+    endgenerate
+
+    // assign led[3] = ~led_current_nonce[21];
     // assign led[4] = ~led_current_nonce[22];
     // assign led[5] = ~led_current_nonce[23];
 endmodule

@@ -6,7 +6,8 @@ include $(ENV_FILE)
 export
 endif
 
-TARGET ?= xc7k325tffg676
+# TARGET ?= xc7k325tffg676
+TARGET ?= xcku5p
 
 ifeq ($(TARGET),tangnano9k)
 BOARD := tangnano9k
@@ -25,14 +26,19 @@ BOARD := xc7k325tffg676
 FAMILY := GW2A-18C
 DEVICE := xc7k325tffg676
 OPENFPGA_ARGS := --cable dirtyJtag --fpga-part $(DEVICE) 
+else ifeq ($(TARGET),xcku5p)
+BOARD := xcku5p
+FAMILY := GW2A-18C
+DEVICE := xcku5p
+OPENFPGA_ARGS := --cable dirtyJtag --fpga-part $(DEVICE) 
 else
 $(error Unsupported TARGET '$(TARGET)'. Use tangnano20k or tangnano9k)
 endif
 
 TOP := top
 BUILD := build
-SRC := src/top.v src/uart_rx.v src/uart_tx.v src/bitcoin_hash_core.v src/sha256_compress.v src/lt256.v
-SPINAL_SRC := $(BUILD)/spinal/top.v
+SRC := src/top.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
+SPINAL_SRC := $(BUILD)/spinal/top.sv
 SPINAL_PREFIX := $(BUILD)/tangminer_spinal_$(TARGET)
 VERILOG_PREFIX := $(BUILD)/tangminer_verilog_$(TARGET)
 OSS_CAD_SUITE ?= /c/fpga/oss-cad-suite
@@ -67,8 +73,11 @@ MCU_MONITOR_PORT := $(if $(MCU_PORT),--port $(MCU_PORT),)
 
 .PHONY: build load flash clean sim sim-lt256 sim-sha sim-bitcoin sim-dual sim-uart gowin flash-gowin temp ping mcu-build mcu-flash mcu-monitor mcu-clean mcu-test FORCE
 
+lint:
+	iverilog -g2012 -o test_bin -I C:/fpga/oss-cad-suite/share/yosys/xilinx C:/fpga/oss-cad-suite/share/yosys/xilinx/cells_sim.v stubs/*.sv src/*.sv
+	rm test_bin
 
-build: vivado
+build: lint ultrascale
 
 $(BUILD)/.dir:
 	mkdir -p $(BUILD)
@@ -96,23 +105,23 @@ temp:
 sim: sim-lt256 sim-sha sim-bitcoin sim-dual sim-uart
 
 sim-lt256: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_lt256 sim/tb_lt256.v src/lt256.v
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_lt256 sim/tb_lt256.sv src/lt256.sv
 	$(VVP) $(BUILD)/tb_lt256
 
 sim-sha: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_sha256_compress sim/tb_sha256_compress.v src/sha256_compress.v
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_sha256_compress sim/tb_sha256_compress.sv src/sha256_compress.sv
 	$(VVP) $(BUILD)/tb_sha256_compress
 
 sim-bitcoin: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_bitcoin_hash_core sim/tb_bitcoin_hash_core.v src/bitcoin_hash_core.v src/sha256_compress.v src/lt256.v
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_bitcoin_hash_core sim/tb_bitcoin_hash_core.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
 	$(VVP) $(BUILD)/tb_bitcoin_hash_core
 
 sim-dual: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_dual_bitcoin_hash_core sim/tb_dual_bitcoin_hash_core.v src/bitcoin_hash_core.v src/sha256_compress.v src/lt256.v
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_dual_bitcoin_hash_core sim/tb_dual_bitcoin_hash_core.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
 	$(VVP) $(BUILD)/tb_dual_bitcoin_hash_core
 
 sim-uart: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_uart_top sim/tb_uart_top.v src/top.v src/uart_rx.v src/uart_tx.v src/bitcoin_hash_core.v src/sha256_compress.v src/lt256.v
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_uart_top sim/tb_uart_top.sv src/top.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
 	$(VVP) $(BUILD)/tb_uart_top
 
 gowin:
@@ -121,6 +130,11 @@ gowin:
 vivado:
 	rm -rf build_vivado/*
 	$(VIVADO) -mode batch -source build_kintex7.tcl -log ./build_vivado/vivado_build.log -journal ./build_vivado/vivado.jou
+	python3.14.exe scripts/render_floorplan.py
+
+ultrascale:
+	rm -rf build_vivado/*
+	$(VIVADO) -mode batch -source build_ultrascale.tcl -log ./build_vivado/vivado_build.log -journal ./build_vivado/vivado.jou
 	python3.14.exe scripts/render_floorplan.py
 
 mine:

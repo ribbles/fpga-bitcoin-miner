@@ -6,11 +6,11 @@ from collections import Counter
 PROFILE_LOG = "profile.txt"
 LINE_DUMP = "build/line_profile_dump.txt"
 SOURCE_FILES = [
-    "src/top.v",
-    "src/uart_rx.v",
-    "src/uart_tx.v",
-    "src/bitcoin_hash_core.v",
-    "src/sha256_compress.v",
+    "src/top.sv",
+    "src/uart_rx.sv",
+    "src/uart_tx.sv",
+    "src/bitcoin_hash_core.sv",
+    "src/sha256_compress.sv",
 ]
 
 CELL_TYPES = {
@@ -93,7 +93,7 @@ def inferred_ranges(cell_name):
     name = cell_name.replace("\\", "")
 
     if "core" in name and ".sha." in name:
-        path = os.path.normpath("src/sha256_compress.v")
+        path = os.path.normpath("src/sha256_compress.sv")
         if "state_out" in name:
             if any(token in name for token in ("h0", "h1", "h2", "h3")):
                 return [(path, 215, 215)]
@@ -123,24 +123,24 @@ def inferred_ranges(cell_name):
         return [(path, 111, 225)]
 
     if "subtraction" in name or "lt255" in name:
-        return [(os.path.normpath("src/bitcoin_hash_core.v"), 81, 82)]
+        return [(os.path.normpath("src/bitcoin_hash_core.sv"), 81, 82)]
     if "current_nonce" in name:
-        return [(os.path.normpath("src/bitcoin_hash_core.v"), 149, 149)]
+        return [(os.path.normpath("src/bitcoin_hash_core.sv"), 149, 149)]
     if name.startswith("core0.") or name.startswith("core1."):
-        return [(os.path.normpath("src/bitcoin_hash_core.v"), 86, 171)]
+        return [(os.path.normpath("src/bitcoin_hash_core.sv"), 86, 171)]
     if name.startswith("rx0."):
-        return [(os.path.normpath("src/uart_rx.v"), 23, 85)]
+        return [(os.path.normpath("src/uart_rx.sv"), 23, 85)]
     if name.startswith("tx0."):
-        return [(os.path.normpath("src/uart_tx.v"), 22, 82)]
+        return [(os.path.normpath("src/uart_tx.sv"), 22, 82)]
     if name.startswith("reset_counter"):
-        return [(os.path.normpath("src/top.v"), 254, 321)]
-    return [(os.path.normpath("src/top.v"), 254, 321)]
+        return [(os.path.normpath("src/top.sv"), 254, 321)]
+    return [(os.path.normpath("src/top.sv"), 254, 321)]
 
 
 
 def project_ranges(line):
     ranges = []
-    matches = re.findall(r'([\w./\\]+\.v):(\d+)(?:\.\d+)?(?:-(\d+)(?:\.\d+)?)?', line)
+    matches = re.findall(r'([\w./\\]+\.sv):(\d+)(?:\.\d+)?(?:-(\d+)(?:\.\d+)?)?', line)
     for file_path, start, end in matches:
         norm_path = os.path.normpath(file_path)
         if norm_path.startswith(os.path.normpath("src") + os.sep):

@@ -76,7 +76,7 @@ You can use any pool miner that supports **Stratum V1**. The code connects to `p
 
 # Notes:
 
-1. The Xilinx has a wrapper top Verilog file called [top_kintex.v](./top_kintext.v) that constructs a 210MHz clock from the 50MHz oscillator
+1. The Xilinx has a wrapper top Verilog file called [top_kintex.sv](./top_kintext.sv) that constructs a 210MHz clock from the 50MHz oscillator
 2. You can set the core count in [build_kintex7.tcl](./build_kintex7.tcl)
 
 
@@ -148,7 +148,7 @@ FPGA is alive
 
 # Mining!
 
-To mine from the host:
+To mine from the PC:
 
 ```
 make mine
@@ -162,7 +162,7 @@ Any proof-of-work and bitcoins found are logged as part of the output.
 
 ## MCU Mining
 
-To mine from the MCU - just plug it in.
+To mine from the MCU requires connecting the TX & RX serial connection between the FPGA and MCU. *TX connects to RX*.
 
 
 ## Check The FPGA Core Temperature

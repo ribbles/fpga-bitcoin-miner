@@ -21,28 +21,6 @@ set_property PACKAGE_PIN Y26 [get_ports {led[3]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {led[*]}]
 set_property SLEW SLOW [get_ports {led[*]}]
 
-
-# GPIO
-# set_property PACKAGE_PIN  B9 	[get_ports {gpio_pins[0]}]
-# set_property PACKAGE_PIN  B10	[get_ports {gpio_pins[1]}]
-# set_property PACKAGE_PIN  A12	[get_ports {gpio_pins[2]}]
-# set_property PACKAGE_PIN  A14	[get_ports {gpio_pins[3]}]
-# set_property PACKAGE_PIN  A8 	[get_ports {gpio_pins[4]}]
-# set_property PACKAGE_PIN  A9	[get_ports {gpio_pins[5]}]
-# set_property PACKAGE_PIN  A10	[get_ports {gpio_pins[6]}]
-# set_property PACKAGE_PIN  A13	[get_ports {gpio_pins[7]}]
-# set_property PACKAGE_PIN AE21	[get_ports {gpio_pins[8]}]
-# set_property PACKAGE_PIN AF23	[get_ports {gpio_pins[9]}]
-# set_property PACKAGE_PIN AF24	[get_ports {gpio_pins[10]}]
-# set_property PACKAGE_PIN AE25	[get_ports {gpio_pins[11]}]
-# set_property PACKAGE_PIN AF22	[get_ports {gpio_pins[12]}]
-# set_property PACKAGE_PIN AE22	[get_ports {gpio_pins[13]}]
-# set_property PACKAGE_PIN AE23	[get_ports {gpio_pins[14]}]
-# set_property PACKAGE_PIN AF25	[get_ports {gpio_pins[15]}]
-# set_property IOSTANDARD LVCMOS33 [get_ports {gpio_pins[*]}]
-# set_property PULLDOWN true [get_ports {gpio_pins[*]}]
-
-
 # GPIO 7
 set_property PACKAGE_PIN  AE21		[get_ports {uart_tx_pin}]
 set_property IOSTANDARD LVCMOS33	[get_ports {uart_tx_pin}]
