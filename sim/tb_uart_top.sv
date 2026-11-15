@@ -1,8 +1,10 @@
 `timescale 1ns/1ps
 
-module tb_uart_top;
-    localparam integer CLK_FREQ = 6400000;
-    localparam integer BAUD_RATE = 100000;
+module tb_uart_top #(
+    parameter integer CLK_FREQ = 6400000,
+    parameter integer BAUD_RATE = 100000,
+    parameter integer CORES = 1
+);
     localparam integer CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;
 
     localparam [255:0] TEST_MIDSTATE =
@@ -25,7 +27,7 @@ module tb_uart_top;
     top #(
         .CLK_FREQ(CLK_FREQ),
         .BAUD_RATE(BAUD_RATE),
-        .CORES(1)
+        .CORES(CORES)
     ) dut (
         .clk(clk),
         .uart_rx_pin(uart_rx_pin),

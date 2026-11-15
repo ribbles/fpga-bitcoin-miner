@@ -37,7 +37,7 @@ endif
 
 TOP := top
 BUILD := build
-SRC := src/top.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
+SRC := src/top.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress_pipeline.sv src/sha256_compress.sv src/lt256.sv
 SPINAL_SRC := $(BUILD)/spinal/top.sv
 SPINAL_PREFIX := $(BUILD)/tangminer_spinal_$(TARGET)
 VERILOG_PREFIX := $(BUILD)/tangminer_verilog_$(TARGET)
@@ -71,10 +71,14 @@ MINER_PASS ?=
 MCU_UPLOAD_PORT := $(if $(MCU_PORT),--upload-port $(MCU_PORT),)
 MCU_MONITOR_PORT := $(if $(MCU_PORT),--port $(MCU_PORT),)
 
-.PHONY: build load flash clean sim sim-lt256 sim-sha sim-bitcoin sim-dual sim-uart gowin flash-gowin temp ping mcu-build mcu-flash mcu-monitor mcu-clean mcu-test FORCE
+.PHONY: build load flash clean lint-pipelined sim sim-lt256 sim-sha sim-sha-pipeline sim-bitcoin sim-dual sim-uart sim-uart-pipelined sim-uart-pipelined-multicore gowin ultrascale-pipelined flash-gowin temp ping mcu-build mcu-flash mcu-monitor mcu-clean mcu-test FORCE
 
 lint:
 	iverilog -g2012 -o test_bin -I C:/fpga/oss-cad-suite/share/yosys/xilinx C:/fpga/oss-cad-suite/share/yosys/xilinx/cells_sim.v stubs/*.sv src/*.sv
+	rm test_bin
+
+lint-pipelined:
+	$(IVERILOG) -g2012 -s top_ultrascale_pipelined -o test_bin -I C:/fpga/oss-cad-suite/share/yosys/xilinx C:/fpga/oss-cad-suite/share/yosys/xilinx/cells_sim.v stubs/*.sv src/*.sv
 	rm test_bin
 
 build: lint ultrascale
@@ -102,7 +106,7 @@ flash-gowin:
 temp:
 	OPENFPGALOADER='$(OPENFPGALOADER)' scripts/xadc_temperature.sh $(OPENFPGA_ARGS)
 
-sim: sim-lt256 sim-sha sim-bitcoin sim-dual sim-uart
+sim: sim-lt256 sim-sha sim-sha-pipeline sim-bitcoin sim-dual sim-uart
 
 sim-lt256: | $(BUILD)/.dir
 	$(IVERILOG) -g2012 -o $(BUILD)/tb_lt256 sim/tb_lt256.sv src/lt256.sv
@@ -112,17 +116,29 @@ sim-sha: | $(BUILD)/.dir
 	$(IVERILOG) -g2012 -o $(BUILD)/tb_sha256_compress sim/tb_sha256_compress.sv src/sha256_compress.sv
 	$(VVP) $(BUILD)/tb_sha256_compress
 
+sim-sha-pipeline: | $(BUILD)/.dir
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_sha256_compress_pipeline sim/tb_sha256_compress_pipeline.sv src/sha256_compress_pipeline.sv
+	$(VVP) $(BUILD)/tb_sha256_compress_pipeline
+
 sim-bitcoin: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_bitcoin_hash_core sim/tb_bitcoin_hash_core.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_bitcoin_hash_core sim/tb_bitcoin_hash_core.sv src/bitcoin_hash_core.sv src/sha256_compress_pipeline.sv src/lt256.sv
 	$(VVP) $(BUILD)/tb_bitcoin_hash_core
 
 sim-dual: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_dual_bitcoin_hash_core sim/tb_dual_bitcoin_hash_core.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_dual_bitcoin_hash_core sim/tb_dual_bitcoin_hash_core.sv src/bitcoin_hash_core.sv src/sha256_compress_pipeline.sv src/lt256.sv
 	$(VVP) $(BUILD)/tb_dual_bitcoin_hash_core
 
 sim-uart: | $(BUILD)/.dir
-	$(IVERILOG) -g2012 -o $(BUILD)/tb_uart_top sim/tb_uart_top.sv src/top.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress.sv src/lt256.sv
+	$(IVERILOG) -g2012 -o $(BUILD)/tb_uart_top sim/tb_uart_top.sv src/top.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress_pipeline.sv src/lt256.sv
 	$(VVP) $(BUILD)/tb_uart_top
+
+sim-uart-pipelined: | $(BUILD)/.dir
+	$(IVERILOG) -g2012 -DPIPELINE_SIM_GATING -Ptb_uart_top.CLK_FREQ=400000 -Ptb_uart_top.BAUD_RATE=100000 -o $(BUILD)/tb_uart_top_pipelined sim/tb_uart_top.sv sim/top_pipelined_compat.sv src/top_pipelined.sv src/mining_result_fifo.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress_pipeline.sv src/lt256.sv
+	$(VVP) $(BUILD)/tb_uart_top_pipelined
+
+sim-uart-pipelined-multicore: | $(BUILD)/.dir
+	$(IVERILOG) -g2012 -DPIPELINE_SIM_GATING -Ptb_uart_top.CLK_FREQ=400000 -Ptb_uart_top.BAUD_RATE=100000 -Ptb_uart_top.CORES=3 -o $(BUILD)/tb_uart_top_pipelined_multicore sim/tb_uart_top.sv sim/top_pipelined_compat.sv src/top_pipelined.sv src/mining_result_fifo.sv src/uart_rx.sv src/uart_tx.sv src/bitcoin_hash_core.sv src/sha256_compress_pipeline.sv src/lt256.sv
+	$(VVP) $(BUILD)/tb_uart_top_pipelined_multicore
 
 gowin:
 	/c/Gowin/Gowin_V1.9.11.03_Education_x64/IDE/bin/gw_sh.exe build_gowin.tcl
@@ -135,6 +151,11 @@ vivado:
 ultrascale:
 	rm -rf build_vivado/*
 	$(VIVADO) -mode batch -source build_ultrascale.tcl -log ./build_vivado/vivado_build.log -journal ./build_vivado/vivado.jou
+	python3.14.exe scripts/render_floorplan.py
+
+ultrascale-pipelined:
+	rm -rf build_vivado/*
+	$(VIVADO) -mode batch -source build_ultrascale_pipelined.tcl -log ./build_vivado/vivado_build.log -journal ./build_vivado/vivado.jou
 	python3.14.exe scripts/render_floorplan.py
 
 mine:
