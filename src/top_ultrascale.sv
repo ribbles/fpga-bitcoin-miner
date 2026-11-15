@@ -1,7 +1,7 @@
 `default_nettype wire
 
 module top_ultrascale #(
-    parameter CLK_FREQ = 100000000,
+    parameter CLK_FREQ = 200000000,
     parameter INPUT_CLK_FREQ = 700000000,
     parameter BAUD_RATE = 115200,
     parameter CORES = 2,
@@ -14,6 +14,26 @@ module top_ultrascale #(
     output [LEDS-1:0] led
 );
 
+    // Select an approximately 100 MHz PFD and 1200 MHz VCO. The feedback
+    // multiplier is rounded to the MMCME4 fractional step of 1/8.
+    localparam longint MMCM_TARGET_PFD_FREQ = 100000000;
+    localparam longint MMCM_TARGET_VCO_FREQ = 1200000000;
+    localparam integer MMCM_DIVCLK_DIVIDE =
+        (INPUT_CLK_FREQ + (MMCM_TARGET_PFD_FREQ / 2)) / MMCM_TARGET_PFD_FREQ;
+    localparam longint MMCM_MULT_X8 =
+        ((MMCM_TARGET_VCO_FREQ * MMCM_DIVCLK_DIVIDE * 8) + (INPUT_CLK_FREQ / 2)) /
+        INPUT_CLK_FREQ;
+    localparam real MMCM_CLKFBOUT_MULT_F = MMCM_MULT_X8 / 8.0;
+    localparam longint MMCM_VCO_FREQ =
+        (INPUT_CLK_FREQ * MMCM_MULT_X8) / (MMCM_DIVCLK_DIVIDE * 8);
+
+    // Use the nearest integer output divider, then pass the resulting actual
+    // clock frequency to the design so counters and UART timing match it.
+    localparam integer MMCM_CLKOUT0_DIVIDE =
+        (MMCM_VCO_FREQ + (CLK_FREQ / 2)) / CLK_FREQ;
+    localparam integer ACTUAL_CLK_FREQ = MMCM_VCO_FREQ / MMCM_CLKOUT0_DIVIDE;
+    localparam real MMCM_CLKIN1_PERIOD = 1000000000.0 / INPUT_CLK_FREQ;
+
     wire input_clk_ibuf, output_clk_mmcm, output_clk, mmcm_fb, mmcm_locked, sys_rst;
 
     // 1. Differential SSTL12 to single-ended input buffer
@@ -25,19 +45,19 @@ module top_ultrascale #(
         .IB (clk_n)
     );
 
-    // 2. MMCM: 700 MHz -> 100 MHz (PFD = 100 MHz, VCO = 1200 MHz).
+    // 2. MMCM values are calculated from INPUT_CLK_FREQ and requested CLK_FREQ.
     // Output speed is input clock (MHz) × CLKFBOUT_MULT_F ÷ DIVCLK_DIVIDE ÷ CLKOUT0_DIVIDE_F
-    // i.e. 700 × 12 ÷ 7 ÷ 12 = 100 MHz
+    // For 700 MHz -> 200 MHz: 700 × 12 ÷ 7 ÷ 6 = 200 MHz.
     MMCME4_BASE #(
         .BANDWIDTH("OPTIMIZED"),
-        .CLKFBOUT_MULT_F(12.0),
+        .CLKFBOUT_MULT_F(MMCM_CLKFBOUT_MULT_F),
         .CLKFBOUT_PHASE(0.0),
-        .CLKIN1_PERIOD(1.428571),
-        .CLKOUT0_DIVIDE_F(12.0),
-        .CLKOUT0_DUTY_CYCLE(0.5),  // High time / period: 5.0 ns / 10.0 ns = 0.5 (50%)
+        .CLKIN1_PERIOD(MMCM_CLKIN1_PERIOD),
+        .CLKOUT0_DIVIDE_F(MMCM_CLKOUT0_DIVIDE),
+        .CLKOUT0_DUTY_CYCLE(0.5),  // High time / output period = 0.5 (50%).
         .CLKOUT0_PHASE(0.0),
-        .DIVCLK_DIVIDE(7),
-        .REF_JITTER1(0.010),        // Jitter in UI: 14.3 ps / 1.4286 ns = 0.010
+        .DIVCLK_DIVIDE(MMCM_DIVCLK_DIVIDE),
+        .REF_JITTER1(0.010),        // Reference jitter / input period = 0.010 (1% UI).
         .STARTUP_WAIT("FALSE")
     ) u_mmcme4_base (
         .CLKOUT0  (output_clk_mmcm),
@@ -60,8 +80,8 @@ module top_ultrascale #(
         .CLKFBIN  (mmcm_fb)
     );
 
-    // 3. Global clock buffer for the 100 MHz MMCM output.
-    BUFG u_bufg_100m (
+    // 3. Global clock buffer for the calculated MMCM output.
+    BUFG u_bufg_output (
         .O (output_clk),
         .I (output_clk_mmcm)
     );
@@ -71,7 +91,7 @@ module top_ultrascale #(
 
     // 4. Submodule Instantiation
     top #(
-        .CLK_FREQ(CLK_FREQ),
+        .CLK_FREQ(ACTUAL_CLK_FREQ),
         .BAUD_RATE(BAUD_RATE),
         .CORES(CORES),
         .LEDS(LEDS)
