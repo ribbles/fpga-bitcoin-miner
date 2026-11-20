@@ -4,7 +4,8 @@
 source "./constr/build.tlc"
 
 set part_device "xc7k325tffg676-2"
-set cores       
+set cores       2
+set input_clk_freq 50000000
 set clk_freq    210000000
 
 set output_dir  "./build_vivado"
@@ -19,9 +20,9 @@ read_verilog [glob ./src/*.sv]
 read_xdc "./constr/kintex7.xdc"
 
 # 3. Synthesize the top-level with parameter overrides.
-synth_design -top top_kintex \
+synth_design -top top_kintex7 \
              -part $part_device \
-             -generic [list CLK_FREQ=$clk_freq INPUT_CLK_FREQ=50000000 CORES=$cores]
+             -generic [list CLK_FREQ=$clk_freq INPUT_CLK_FREQ=$input_clk_freq CORES=$cores]
             #  -flatten_hierarchy none
 
 # Remap nonce register enables into datapath logic. This avoids a long routed

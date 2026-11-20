@@ -96,15 +96,23 @@ module bitcoin_hash_core #(
     endfunction
 
     wire [255:0] final_hash_be = reverse_bytes_256(final_digest);
-    wire final_hash_meets_target;
-    wire final_epoch_matches = final_tag[TAG_WIDTH-1:32] == job_epoch;
-    wire [31:0] final_nonce = final_tag[31:0];
+    reg compare_word_valid = 1'b0;
+    reg [255:0] compare_word_digest = 256'd0;
+    reg [31:0] compare_word_nonce = 32'd0;
+    reg [EPOCH_WIDTH-1:0] compare_word_epoch = {EPOCH_WIDTH{1'b0}};
+    reg [7:0] compare_word_lt = 8'd0;
+    reg [7:0] compare_word_eq = 8'd0;
 
-    lt256 target_compare (
-        .a(final_hash_be),
-        .b(job_target),
-        .lt(final_hash_meets_target)
-    );
+    reg compare_half_valid = 1'b0;
+    reg [255:0] compare_half_digest = 256'd0;
+    reg [31:0] compare_half_nonce = 32'd0;
+    reg [EPOCH_WIDTH-1:0] compare_half_epoch = {EPOCH_WIDTH{1'b0}};
+    reg compare_high_lt = 1'b0;
+    reg compare_high_eq = 1'b0;
+    reg compare_low_lt = 1'b0;
+
+    wire compare_hash_meets_target =
+        compare_high_lt || (compare_high_eq && compare_low_lt);
 
     wire [287:0] report_payload = {found_nonce, found_hash};
     assign report_byte_out = report_shift_reg[287:280];
@@ -112,6 +120,51 @@ module bitcoin_hash_core #(
 
     always @(posedge clk) begin
         result_valid <= 1'b0;
+
+        // Split the 256-bit target comparison into parallel word compares and
+        // a registered two-half priority reduction for the 600 MHz build.
+        compare_word_valid <= final_valid;
+        if (final_valid) begin
+            compare_word_digest <= final_digest;
+            compare_word_nonce <= final_tag[31:0];
+            compare_word_epoch <= final_tag[TAG_WIDTH-1:32];
+            compare_word_lt[7] <= final_hash_be[255:224] < job_target[255:224];
+            compare_word_lt[6] <= final_hash_be[223:192] < job_target[223:192];
+            compare_word_lt[5] <= final_hash_be[191:160] < job_target[191:160];
+            compare_word_lt[4] <= final_hash_be[159:128] < job_target[159:128];
+            compare_word_lt[3] <= final_hash_be[127:96] < job_target[127:96];
+            compare_word_lt[2] <= final_hash_be[95:64] < job_target[95:64];
+            compare_word_lt[1] <= final_hash_be[63:32] < job_target[63:32];
+            compare_word_lt[0] <= final_hash_be[31:0] < job_target[31:0];
+            compare_word_eq[7] <= final_hash_be[255:224] == job_target[255:224];
+            compare_word_eq[6] <= final_hash_be[223:192] == job_target[223:192];
+            compare_word_eq[5] <= final_hash_be[191:160] == job_target[191:160];
+            compare_word_eq[4] <= final_hash_be[159:128] == job_target[159:128];
+            compare_word_eq[3] <= final_hash_be[127:96] == job_target[127:96];
+            compare_word_eq[2] <= final_hash_be[95:64] == job_target[95:64];
+            compare_word_eq[1] <= final_hash_be[63:32] == job_target[63:32];
+            compare_word_eq[0] <= final_hash_be[31:0] == job_target[31:0];
+        end
+
+        compare_half_valid <= compare_word_valid;
+        if (compare_word_valid) begin
+            compare_half_digest <= compare_word_digest;
+            compare_half_nonce <= compare_word_nonce;
+            compare_half_epoch <= compare_word_epoch;
+            compare_high_lt <=
+                compare_word_lt[7] ||
+                (compare_word_eq[7] && compare_word_lt[6]) ||
+                (compare_word_eq[7] && compare_word_eq[6] && compare_word_lt[5]) ||
+                (compare_word_eq[7] && compare_word_eq[6] &&
+                 compare_word_eq[5] && compare_word_lt[4]);
+            compare_high_eq <= &compare_word_eq[7:4];
+            compare_low_lt <=
+                compare_word_lt[3] ||
+                (compare_word_eq[3] && compare_word_lt[2]) ||
+                (compare_word_eq[3] && compare_word_eq[2] && compare_word_lt[1]) ||
+                (compare_word_eq[3] && compare_word_eq[2] &&
+                 compare_word_eq[1] && compare_word_lt[0]);
+        end
 
         if (report_select && report_load) begin
             report_shift_reg <= report_payload;
@@ -136,13 +189,15 @@ module bitcoin_hash_core #(
                 current_nonce <= current_nonce + NONCE_STRIDE;
             end
 
-            if (final_valid && final_epoch_matches && final_hash_meets_target) begin
+            if (compare_half_valid &&
+                (compare_half_epoch == job_epoch) &&
+                compare_hash_meets_target) begin
                 result_valid <= 1'b1;
-                result_nonce <= final_nonce;
-                result_hash <= final_digest;
+                result_nonce <= compare_half_nonce;
+                result_hash <= compare_half_digest;
                 if (!found) begin
-                    found_nonce <= final_nonce;
-                    found_hash <= final_digest;
+                    found_nonce <= compare_half_nonce;
+                    found_hash <= compare_half_digest;
                     found <= 1'b1;
                     running <= 1'b0;
                 end

@@ -76,7 +76,7 @@ You can use any pool miner that supports **Stratum V1**. The code connects to `p
 
 # Notes:
 
-1. The Xilinx has a wrapper top Verilog file called [top_kintex.sv](./top_kintext.sv) that constructs a 210MHz clock from the 50MHz oscillator
+1. The Xilinx has a wrapper top Verilog file called [top_kintex7.sv](./top_kintext7.sv) that constructs a 210MHz clock from the 50MHz oscillator
 2. You can set the core count in [build_kintex7.tcl](./build_kintex7.tcl)
 
 

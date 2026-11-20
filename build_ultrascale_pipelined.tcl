@@ -2,7 +2,9 @@
 source "./constr/build.tlc"
 
 set part_device "xcku5p-ffvb676-1-i"
-set clk_freq 200000000
+# Three cores route at 200 MHz, but the physical board failed mining under
+# that switching load. 100 MHz is hardware-verified at approximately 300 MH/s.
+set clk_freq 100000000
 set cores 3
 set output_dir "./build_vivado"
 

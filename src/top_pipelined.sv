@@ -182,6 +182,7 @@ module top_pipelined #(
     end
 
     reg [287:0] tx_payload = 288'd0;
+    reg [607:0] tx_echo_payload = 608'd0;
 
     localparam T_IDLE = 3'd0;
     localparam T_FETCH = 3'd1;
@@ -244,6 +245,7 @@ module top_pipelined #(
                 T_IDLE: begin
                     if (echo_seen_toggle != echo_toggle) begin
                         tx_echo <= 1'b1;
+                        tx_echo_payload <= {midstate, tail, target};
                         tx_index <= 7'd0;
                         echo_seen_toggle <= echo_toggle;
                         tx_state <= T_SEND;
@@ -263,11 +265,11 @@ module top_pipelined #(
                 T_SEND: begin
                     if (!tx_busy) begin
                         if (tx_echo) begin
-                            tx_data <= echo_response_byte(tx_index);
+                            tx_data <= (tx_index == 0) ? "E" : tx_echo_payload[607:600];
                         end else if (tx_index == 0) begin
                             tx_data <= "F";
                         end else begin
-                            tx_data <= tx_payload[287 - (tx_index - 1) * 8 -: 8];
+                            tx_data <= tx_payload[287:280];
                         end
                         tx_start <= 1'b1;
                         tx_state <= T_WAIT;
@@ -279,6 +281,11 @@ module top_pipelined #(
                             (!tx_echo && tx_index == FOUND_RESP_BYTES - 1)) begin
                             tx_state <= T_IDLE;
                         end else begin
+                            if (tx_echo && tx_index != 0) begin
+                                tx_echo_payload <= {tx_echo_payload[599:0], 8'h00};
+                            end else if (!tx_echo && tx_index != 0) begin
+                                tx_payload <= {tx_payload[279:0], 8'h00};
+                            end
                             tx_index <= tx_index + 7'd1;
                             tx_state <= T_SEND;
                         end

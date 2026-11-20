@@ -6,8 +6,8 @@ include $(ENV_FILE)
 export
 endif
 
-# TARGET ?= xc7k325tffg676
-TARGET ?= xcku5p
+TARGET ?= xc7k325tffg676
+# TARGET ?= xcku5p
 
 ifeq ($(TARGET),tangnano9k)
 BOARD := tangnano9k
@@ -29,7 +29,7 @@ OPENFPGA_ARGS := --cable dirtyJtag --fpga-part $(DEVICE)
 else ifeq ($(TARGET),xcku5p)
 BOARD := xcku5p
 FAMILY := GW2A-18C
-DEVICE := xcku5p
+DEVICE := xcku5p-ffvb676
 OPENFPGA_ARGS := --cable dirtyJtag --fpga-part $(DEVICE) 
 else
 $(error Unsupported TARGET '$(TARGET)'. Use tangnano20k or tangnano9k)
@@ -156,6 +156,11 @@ ultrascale:
 ultrascale-pipelined:
 	rm -rf build_vivado/*
 	$(VIVADO) -mode batch -source build_ultrascale_pipelined.tcl -log ./build_vivado/vivado_build.log -journal ./build_vivado/vivado.jou
+	python3.14.exe scripts/render_floorplan.py
+
+kintex7-pipelined:
+	rm -rf build_vivado/*
+	$(VIVADO) -mode batch -source build_kintex7_pipelined.tcl -log ./build_vivado/vivado_build.log -journal ./build_vivado/vivado.jou
 	python3.14.exe scripts/render_floorplan.py
 
 mine:

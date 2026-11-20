@@ -1,6 +1,6 @@
 `default_nettype wire
 
-module top_kintex #(
+module top_kintex7 #(
     parameter CLK_FREQ = 210000000,
     parameter INPUT_CLK_FREQ = 50000000,
     parameter BAUD_RATE = 115200,
